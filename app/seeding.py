@@ -10,4 +10,9 @@ filteredNutrients = foodNutrient[foodNutrient['nutrient_id'].isin(targetNutrient
 pivotNutrients = filteredNutrients.pivot(index = "fdc_id", columns = "nutrient_id", values = "amount")
 pivotNutrients.columns = ["Protein", "Fats", "Carbs", "Calories"]
 pivotNutrients = pivotNutrients.reset_index()
+mergedPd = pd.merge(food[["fdc_id", "description"]], pivotNutrients, on = "fdc_id", how="inner")
+minimizedTable = mergedPd.dropna(axis = 0, subset = ["Protein", "Fats", "Carbs" , "Calories"], inplace = False)
+minimizedTable = minimizedTable.reset_index()
 print(pivotNutrients)
+print(mergedPd)
+print(minimizedTable)
