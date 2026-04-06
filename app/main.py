@@ -1,10 +1,13 @@
 #Connection to FastAPI. FastAPI starter
 
 from fastapi import FastAPI
-from services.testService import test_Function
 
 app = FastAPI()
 
-@app.get("/ping-db")
-async def test():
-    return test_Function()
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to Rafa's Nutrition App!"}
+
+@app.get("/status")
+def check_status():
+    return {"Status": "Database is live", "Rows": 376}
