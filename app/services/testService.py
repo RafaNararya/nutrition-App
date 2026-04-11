@@ -1,8 +1,7 @@
-#This file performs logic and calls db.py functions.
+from sqlalchemy.orm import Session
+from app.models.food import Food
 
-from db import test_query
+def search_food_items(db: Session, query: str):
+    to_search = f"%{query}%"
+    return db.query(Food).filter(Food.description.ilike(to_search)).all()
 
-def test_Function():
-    result = test_query()
-    processed_result = {"db_status": result[0][0]}
-    return processed_result
