@@ -1,7 +1,7 @@
 #Connection to FastAPI. FastAPI starter
 
 from fastapi import FastAPI
-from app.routers import testRouter, userRouter
+from app.routers import testRouter, userRouter, mealRouter
 from app.models import food, meal, user
 from app.utils.db import Base, engine
 
@@ -10,6 +10,7 @@ app.include_router(testRouter.router)
 #.include_router("routerFileName".router): should be done for every new router file
 
 app.include_router(userRouter.router)
+app.include_router(mealRouter.router)
 
 Base.metadata.create_all(bind=engine)
 
