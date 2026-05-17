@@ -20,3 +20,7 @@ def view_user_logs(user_id: int, db: Session = Depends(get_db)):
     # {user_id} is a Path Parameter. Whatever the user types in the URL 
     # (e.g., /meals/1) gets passed into the function as the variable 'user_id'.
     return mealTracking.get_user_logs(db = db, user_id=user_id)
+
+@router.get("/summary/{user_id}")
+def read_summary(user_id: int, db: Session = Depends(get_db)):
+    return mealTracking.get_summary(db = db, user_id=user_id)
