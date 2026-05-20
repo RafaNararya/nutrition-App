@@ -21,6 +21,11 @@ def view_user_logs(user_id: int, db: Session = Depends(get_db)):
     # (e.g., /meals/1) gets passed into the function as the variable 'user_id'.
     return mealTracking.get_user_logs(db = db, user_id=user_id)
 
+
+# Dynamic Path Parameter Endpoint: GET /meals/summary/{user_id}
+# Note: You didn't define a 'response_model' here yet. By default, FastAPI will automatically 
+# serialize your raw Python dictionary ('summary') into a valid JSON object string.
 @router.get("/summary/{user_id}")
 def read_summary(user_id: int, db: Session = Depends(get_db)):
+    # Hand off the verified session and user_id directly to the computation engine above
     return mealTracking.get_summary(db = db, user_id=user_id)

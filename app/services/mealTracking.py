@@ -13,26 +13,38 @@ def log_meal(db: Session, meal_data: MealLogCreate):
     db.add(new_log)
     db.commit()
     db.refresh(new_log)
+
     return new_log
 
 # The point of this function is to pull up every meal that the specific user has ever logged. for user's sake
 def get_user_logs(db: Session, user_id: int):
+    
     return db.query(mealLog).filter(mealLog.user_id == user_id).all()
     # SELECT * FROM meal_logs WHERE user_id = user_id
     #.all() is the secret part that converts this from a database cursor/call to a python list
 
 
 def get_summary(db: Session, user_id: int):
+    # 1. The SQL JOIN: 
+    # By querying BOTH tables simultaneously, SQLAlchemy constructs an INNER JOIN behind the scenes.
+    # It matches the 'food_id' in your logs to the 'fdc_id' primary key in your massive USDA table.
     food_log = (db.query(mealLog, Food).join(Food, mealLog.food_id == Food.fdc_id).filter(mealLog.user_id == user_id).all())
 
+    # 2. Data Structure Initialization:
+    # We initialize an in-memory dictionary. This is the structural draft of the JSON 
+    # response that your future React frontend will parse to display the dashboard.
     summary = {
         "total calories": 0.0,
         "total protein": 0.0,
         "total fats": 0.0,
         "total carbs": 0.0,
-        "meals logged": []
+        "meals logged": [] # A nested array to hold the itemized breakdown
     }
 
+
+    # 3. The Math Engine Loop:
+    # We unpack each tuple from our SQL result. 'log' gives us the user's portion size; 
+    # 'food' gives us the baseline USDA macro values.
     for log, food in food_log:
         grams = log.quantity_grams
 
@@ -41,11 +53,18 @@ def get_summary(db: Session, user_id: int):
         carbs = (food.Carbs / 100) * grams
         fats = (food.Fats / 100) * grams
 
+        # Accumulation (Reduction):
+        # We add the scaled numbers directly into our running tallies inside the dictionary.
         summary["total calories"] += calories
         summary["total protein"] += protein
         summary["total carbs"] += carbs
         summary["total fats"] += fats
 
+
+        # DTO (Data Transfer Object) Mapping:
+        # We append a customized, human-readable dictionary to our list. Notice we use Python's 
+        # round() function to 1 decimal place. This keeps the data payload "clean" so you aren't 
+        # passing long floating-point anomalies (like 42.10000000004) over the internet.
         summary["meals logged"].append({
             "id": log.id,
             "grams": grams, 
