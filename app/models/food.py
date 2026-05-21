@@ -17,3 +17,24 @@ class Food(Base):
     Carbs = Column(Float)
     Calories = Column(Float)
     #Label each column and assign it its type of value
+
+    calcium = Column(Float)
+    iron = Column(Float)
+    magnesium = Column(Float)
+    phosphorus = Column(Float)
+    potassium = Column(Float)
+    sodium = Column(Float)
+    zinc = Column(Float)
+    selenium = Column(Float)
+
+    vitamin_a = Column(Float)
+    vitamin_e = Column(Float)
+    vitamin_c = Column(Float)
+
+    thiamin = Column(Float)
+    riboflavin = Column(Float)
+    niacin = Column(Float)
+    pantothenic_acid = Column(Float)
+    vitamin_b6 = Column(Float)
+    folate = Column(Float)
+    vitamin_b12 = Column(Float)

@@ -30,15 +30,22 @@ def get_summary(db: Session, user_id: int):
     # It matches the 'food_id' in your logs to the 'fdc_id' primary key in your massive USDA table.
     food_log = (db.query(mealLog, Food).join(Food, mealLog.food_id == Food.fdc_id).filter(mealLog.user_id == user_id).all())
 
+
+
+
+    panels = {
+        "macros": ["Calories", "Protein", "Carbs", "Fats"],
+        "minerals": ["calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", "zinc", "selenium"],
+        "b_vitamins": ["thiamin", "riboflavin", "niacin", "pantothenic_acid", "vitamin_b6", "folate", "vitamin_b12"],
+        "antioxidants": ["vitamin_a", "vitamin_c", "vitamin_e"]
+    }
+
     # 2. Data Structure Initialization:
     # We initialize an in-memory dictionary. This is the structural draft of the JSON 
     # response that your future React frontend will parse to display the dashboard.
     summary = {
-        "total calories": 0.0,
-        "total protein": 0.0,
-        "total fats": 0.0,
-        "total carbs": 0.0,
-        "meals logged": [] # A nested array to hold the itemized breakdown
+        "panels": {panel_name: {nut.lower(): 0.0 for nut in nut_list} for panel_name, nut_list in panels.items()},
+        "meals_logged": [] # A nested array to hold the itemized breakdown
     }
 
 
@@ -48,30 +55,35 @@ def get_summary(db: Session, user_id: int):
     for log, food in food_log:
         grams = log.quantity_grams
 
-        calories = (food.Calories / 100) * grams
-        protein = (food.Protein / 100) * grams
-        carbs = (food.Carbs / 100) * grams
-        fats = (food.Fats / 100) * grams
+        meal_item = {
+            "id": log.id,
+            "food_name": food.description,  # Available for easy front-end display!
+            "grams": grams,
+            "panels": {panel_name: {} for panel_name in panels}
+        }
 
         # Accumulation (Reduction):
         # We add the scaled numbers directly into our running tallies inside the dictionary.
-        summary["total calories"] += calories
-        summary["total protein"] += protein
-        summary["total carbs"] += carbs
-        summary["total fats"] += fats
+        # Dynamically loop through every panel list and run the math formula
+        for panel_name, nutrient_list in panels.items():
+            for nutrient in nutrient_list:
+                # getattr(food, "Protein") acts exactly like food.Protein dynamically
+                raw_value = getattr(food, nutrient, 0.0) or 0.0
+                calculated_value = round((raw_value / 100) * grams, 2)
+                
+                # Assign to this specific meal's snapshot
+                meal_item["panels"][panel_name][nutrient.lower()] = calculated_value
+                
+                # Add to the global running daily total for the panel
+                summary["panels"][panel_name][nutrient.lower()] += calculated_value
 
 
         # DTO (Data Transfer Object) Mapping:
         # We append a customized, human-readable dictionary to our list. Notice we use Python's 
         # round() function to 1 decimal place. This keeps the data payload "clean" so you aren't 
         # passing long floating-point anomalies (like 42.10000000004) over the internet.
-        summary["meals logged"].append({
-            "id": log.id,
-            "grams": grams, 
-            "calories": calories,
-            "protein": protein,
-            "carbs": carbs,
-            "fats": fats
-        })
+        summary["meals_logged"].append(meal_item)
+    for panel_name in summary["panels"]:
+        summary["panels"][panel_name] = {k: round(v, 1) for k, v in summary["panels"][panel_name].items()}
 
     return summary
