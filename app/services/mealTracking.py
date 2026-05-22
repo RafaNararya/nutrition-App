@@ -32,7 +32,9 @@ def get_summary(db: Session, user_id: int):
 
 
 
-
+    # Group columns by logical front-end presentation panels.
+    # CRITICAL MECHANICAL REQUIREMENT: The string elements in these arrays must exactly 
+    # match the sensitive-case variable names declared in your SQLAlchemy 'Food' class map.
     panels = {
         "macros": ["Calories", "Protein", "Carbs", "Fats"],
         "minerals": ["calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", "zinc", "selenium"],
@@ -43,6 +45,8 @@ def get_summary(db: Session, user_id: int):
     # 2. Data Structure Initialization:
     # We initialize an in-memory dictionary. This is the structural draft of the JSON 
     # response that your future React frontend will parse to display the dashboard.
+    # Dynamically allocate memory structures for the response payload using nested dictionary comprehension.
+    # Coercing nutrient strings to lowercase prevents case-mismatch processing bugs on the client-side/frontend application layer.
     summary = {
         "panels": {panel_name: {nut.lower(): 0.0 for nut in nut_list} for panel_name, nut_list in panels.items()},
         "meals_logged": [] # A nested array to hold the itemized breakdown
@@ -52,9 +56,11 @@ def get_summary(db: Session, user_id: int):
     # 3. The Math Engine Loop:
     # We unpack each tuple from our SQL result. 'log' gives us the user's portion size; 
     # 'food' gives us the baseline USDA macro values.
+    # Iterate through the returned cursor tuple array.
     for log, food in food_log:
         grams = log.quantity_grams
 
+        # Initialize an isolated JSON-serializable hash map structure for this unique meal item
         meal_item = {
             "id": log.id,
             "food_name": food.description,  # Available for easy front-end display!
