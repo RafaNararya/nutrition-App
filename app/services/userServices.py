@@ -20,17 +20,22 @@ def create_user(db: Session, user: UserCreate):
     return new_user
 
 def updateUser(db: Session, user_id: int, profile_info: userProfileUpdate):
+    # Look for the first user in the database that has a match for the user_id
     db_user = db.query(User).filter(User.id == user_id).first()
 
+    # If user doesn't exist, return a 404 Error
     if not db_user:
         return None
 
+    # overwrite the previous biometric attributes with new, updated biometrics that follows the new schema data that is validated
     db_user.age = profile_info.age
     db_user.gender = profile_info.gender
     db_user.weight_kg = profile_info.weight_kg
     db_user.height_cm = profile_info.height_cm
     db_user.activity_level = profile_info.activity_level
 
+    #Kind of like Git, the first line prepares Postgres to receive the db_user object
+    #Commit finishes the deal and actually adds it into the database
     db.commit()
     db.refresh(db_user)
 
