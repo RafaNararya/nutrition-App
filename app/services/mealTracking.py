@@ -2,6 +2,9 @@ from sqlalchemy.orm import Session
 from app.models.meal import mealLog
 from app.schemas.meal_schema import MealLogCreate
 from app.models.food import Food
+from datetime import datetime, time, timezone
+from app.models.user import User
+from app.services.profileEngine import calculate_user_values
 
 def log_meal(db: Session, meal_data: MealLogCreate):
     # Taking the stuff out of the JSON from the Schema and converting it to something Postgres can read 
@@ -25,10 +28,17 @@ def get_user_logs(db: Session, user_id: int):
 
 
 def get_summary(db: Session, user_id: int):
-    # 1. The SQL JOIN: 
-    # By querying BOTH tables simultaneously, SQLAlchemy constructs an INNER JOIN behind the scenes.
-    # It matches the 'food_id' in your logs to the 'fdc_id' primary key in your massive USDA table.
-    food_log = (db.query(mealLog, Food).join(Food, mealLog.food_id == Food.fdc_id).filter(mealLog.user_id == user_id).all())
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return {"Error": "User not found!"}
+    
+    user_targets = calculate_user_values(user)
+
+    now = datetime.now(timezone.utc)
+    dayStart = datetime.combine(now.date(), time.min, tzinfo = timezone.utc)
+    dayEnd = datetime.combine(now.date(), time.max, tzinfo = timezone.utc)
+
+    food_logs = (db.query(mealLog,Food).join(Food, mealLog.food_id == Food.fdc_id).filter(mealLog.user_id == user_id).filter(mealLog.created_at >= dayStart).filter(mealLog.created_at <= dayEnd).all())
 
 
 
@@ -57,7 +67,7 @@ def get_summary(db: Session, user_id: int):
     # We unpack each tuple from our SQL result. 'log' gives us the user's portion size; 
     # 'food' gives us the baseline USDA macro values.
     # Iterate through the returned cursor tuple array.
-    for log, food in food_log:
+    for log, food in food_logs:
         grams = log.quantity_grams
 
         # Initialize an isolated JSON-serializable hash map structure for this unique meal item
