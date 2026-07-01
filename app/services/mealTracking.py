@@ -19,6 +19,24 @@ def log_meal(db: Session, meal_data: MealLogCreate):
 
     return new_log
 
+def delete_meal(db: Session, meal_log_id: int, user_id: int) -> bool:
+    
+    #Attempts to find a specific meal log belonging to a user and deletes it.
+    #Returns True if successful, False if the record wasn't found.
+    
+    db_item = db.query(mealLog).filter(
+        mealLog.id == meal_log_id, 
+        mealLog.user_id == user_id
+    ).first()
+    
+    if not db_item:
+        return False
+        
+    db.delete(db_item)
+    db.commit()
+    return True
+
+
 # The point of this function is to pull up every meal that the specific user has ever logged. for user's sake
 def get_user_logs(db: Session, user_id: int):
     

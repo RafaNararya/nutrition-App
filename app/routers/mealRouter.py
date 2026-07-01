@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session 
 from app.utils.db import get_db
 from app.schemas.meal_schema import MealLogCreate, MealLogOut
@@ -29,3 +29,17 @@ def view_user_logs(user_id: int, db: Session = Depends(get_db)):
 def read_summary(user_id: int, db: Session = Depends(get_db)):
     # Hand off the verified session and user_id directly to the computation engine above
     return mealTracking.get_summary(db = db, user_id=user_id)
+
+
+@router.delete("/{user_id}/log/{meal_log_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_meal(user_id: int, meal_log_id: int, db: Session = Depends(get_db)):
+    success = mealTracking.delete_meal(db, meal_log_id=meal_log_id, user_id=user_id)
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meal log not found or does not belong to this user."
+        )
+    
+    # HTTP 204 No Content successfully returns an empty body on a clean deletion
+    return None
