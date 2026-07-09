@@ -6,30 +6,43 @@ from app.services.recommendationEngine import find_similar_foods
 
 router = APIRouter(prefix="/recommendations", tags=["Some Recommendations"])
 
+# Defines a GET request endpoint. {food_id} is a dynamic variable passed in the URL path.
 @router.get("/substitute/{food_id}", status_code=status.HTTP_200_OK)
 def get_food_substitutions(food_id: int, db: Session = Depends(get_db)):
+    """API Endpoint that accepts a food_id, find substitutes, gets the details, and returns them"""
     try:
+        # fire up the scikit model to get a list of raw integer IDs (of substitutions)
         recommend_ids = find_similar_foods(food_id, n_recommendations=5)
+
     except RuntimeError as e:
+        # if the model was never initialized, send an exception back
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail = str(e)
         )
-    
+
+    # if list of recommend ids is empty, it means that whatever food_id we passed in doesn't exist in our data
+    # because it should return substitutions, even if they were bad substitutions
     if not recommend_ids:
         raise HTTPException(
             status_code = status.HTTP_404_NOT_FOUND,
             detail = f"Food Item with ID {food_id} not found in dattabase"
         )
 
+    # Go back to the SQL database to fetch the human-readable names and details of those IDs
+    # .in_() is the SQL equivalent of "WHERE id IN (123, 456, 789)"
     recommended_foods = db.query(Food).filter(Food.fdc_id.in_(recommend_ids)).all()
 
+    # Databases don't guarantee they will return rows in the exact order we asked for them.
+    # To fix this, we map the results into a quick dictionary { id: food_object }
     id_to_food_map = {food.fdc_id: food for food in recommended_foods}
     ordered_recommendations = [id_to_food_map[rid] for rid in recommend_ids if rid in id_to_food_map]
 
+    # Make something that'll hold the clean data to send over the internet
     response_payload = []
 
     for food in ordered_recommendations:
+        # Loop through each food object and map database table columns to an organized structure
         response_payload.append({
             "fdc_id": food.fdc_id,
             "food_name": food.description,
@@ -59,6 +72,7 @@ def get_food_substitutions(food_id: int, db: Session = Depends(get_db)):
             }
         })
     
+    # Return the final API dictionary. FastAPI automatically turns this into JSON syntax.
     return {
         "source_food_id": food_id,
         "substitutions_found": len(response_payload),

@@ -7,11 +7,17 @@ from app.utils.db import Base, engine, sessionLocal
 from contextlib import asynccontextmanager
 from app.services.recommendationEngine import initialize_recommendation_engine
 
+# an 'asynccontextmanager' controls startup and shutdown events
+# Anything written BEFORE the "yield" statement happens when the app wakes up
+# Anything written AFTER the "yield" would happen when the server is shut down
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
+    # creates a temporary session to the database
     db = sessionLocal()
     try:
+        # Fire off our engine initialization function
+        # This loads the dataframes and builds the model into memory right as the server starts up
         initialize_recommendation_engine(db)
         print(f"Recommendation Engine Initialized")
     except Exception as e:
@@ -19,7 +25,7 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
     
-    yield
+    yield # This is where the server is actually ready to start running and handle requests
 
 
 
