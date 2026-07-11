@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, text
 food = pd.read_csv("csvFiles/food.csv")
 foodNutrient = pd.read_csv("csvFiles/food_nutrient.csv", low_memory = False)
 nutrient = pd.read_csv("csvFiles/nutrient.csv")
+foodCategory = pd.read_csv("csvFiles/food_category.csv")
 
 #Highlight the nutrients needed (Calories, Carbs, Fats, Protein)
 #Added: Micronutrient Panel (IDs based on their official USDA Database Keys)
@@ -43,9 +44,14 @@ pivotNutrients.columns = [
 # just a secondary / primary (kind of confusing) indexing
 pivotNutrients = pivotNutrients.reset_index()
 
+foodCategory = foodCategory.rename(columns={"id": "food_category_id", "description": "food_group"})
+food = pd.merge(food, foodCategory[["food_category_id", "food_group"]], on="food_category_id", how="left")
+
+food["food_group"] = food["food_group"].fillna("Unknown")
+
 # Execute an INNER JOIN between the descriptive dataset and our nutrient matrix.
 # Discards any food item that lacks matching keys (fdc_id and description specifically) across both dataframes.
-mergedPd = pd.merge(food[["fdc_id", "description"]], pivotNutrients, on = "fdc_id", how="inner")
+mergedPd = pd.merge(food[["fdc_id", "description", "food_group"]], pivotNutrients, on = "fdc_id", how="inner")
 
 # Atwater General Factor System: Calculate proxy calorie estimations for entries 
 # where the USDA left the Calorie field null. 
@@ -69,7 +75,8 @@ minimizedTable = mergedPd.dropna(axis = 0, subset = ["Protein", "Fats", "Carbs" 
 # Housekeeping: Eliminate residual columns created during row splitting or data index resets.
 if 'index' in minimizedTable.columns:
     minimizedTable = minimizedTable.drop(columns=['index'])
-minimizedTable = minimizedTable.reset_index()
+minimizedTable = minimizedTable.drop(columns=['food_category_id'], errors='ignore')
+minimizedTable = minimizedTable.reset_index(drop=True) # drop=True prevents creating a new 'index' column
 
 # Initialize the SQLAlchemy engine object to manage our connection pool to PostgreSQL.
 engine = create_engine("postgresql://nutrition_user:RafasNutrition1502@localhost:5432/nutrition_app")
@@ -86,7 +93,7 @@ with engine.connect() as conn:
 # Bulk insert the sanitized DataFrame into the database.
 # 'if_exists=fail' acts as a safeguard to ensure it doesn't accidentally overwrite data 
 # if the drop step failed to execute completely.
-minimizedTable.to_sql('usda_foods', engine, if_exists = 'fail', index = False)
-print("Database heavily re-seeded with extensive nutritional panels!")
+minimizedTable.to_sql('usda_foods', engine, if_exists='fail', index=False)
+print("Database heavily re-seeded with extensive nutritional panels and food groups!")
 
 
