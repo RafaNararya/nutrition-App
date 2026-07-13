@@ -15,20 +15,33 @@ NUTRIENT_FEATURES = [
     "vitamin_b6", "folate", "vitamin_b12"
 ]
 
+CULINARY_MAPPING = {
+    "Poultry Products": "Animal_Protein",
+    "Beef Products": "Animal_Protein",
+    "Pork Products": "Animal_Protein",
+    "Finfish and Shellfish Products": "Animal_Protein",
+    "Dairy and Egg Products": "Animal_Protein",
+    "Grains and Pasta": "Whole_Grains_Carbs",
+    "Cereal Grains": "Whole_Grains_Carbs",
+    "Vegetables and Vegetable Products": "Produce_Vegetables",
+    "Fruits and Fruit Juices": "Produce_Fruits",
+    "Legumes and Legume Products": "Plant_Protein_Carbs",
+    "Nut and Seed Products": "Fats_Seeds"
+}
 
 # Global variables so that when things are extracted from the table, it's only done once
 # When the app starts up, it will populate once so that the server doesn't have to 
 # query the DB and re-train the AI model every single time a user requests a recommendation
-_FOOD_DF = None # Holds the Pandas DataFrame (the food data table)
-_SCALED_MATRIX = None # Holds the nutrient data after it has been normalized
-_SCALER = None # Holds the mathematical scaler object (needed)
-_KNN_MODEL = None # Holds the trained nearest neighbors model
+_FOOD_DF = None             # Holds the master Pandas DataFrame with culinary columns added
+_GROUP_MODELS = {}          # Dictionary holding separate trained KNN models per group: {group_name: KNN_model}
+_GROUP_SCALERS = {}         # Dictionary holding separate fitted Scalers per group: {group_name: Scaler_object}
+_GROUP_MATRICES = {}        # Dictionary holding separate scaled feature matrices: {group_name: matrix}
 
 def initialize_recommendation_engine(db: Session):
     """Runs once when the server starts. It grabs the food data, prepares it, and then builds the recommendation model off of it"""
 
     # Tell python we want to modify the global variables declaread outside of this function
-    global _FOOD_DF, _SCALED_MATRIX, _SCALER, _KNN_MODEL
+    global _FOOD_DF, __GROUP_MODELS, _GROUP_SCALERS, _GROUP_MATRICES
 
     print("Loading Food Table and Nutrient Stuffs")
 
@@ -48,30 +61,61 @@ def initialize_recommendation_engine(db: Session):
     # 2. Prepare Data
     # Move the 'fdc_id' column of the datat rows and make it the row identifier (index)
     df.set_index("fdc_id", inplace=True)
+
+    # Force in a new column of the table "Culinary_Group" using
+    # The relationships in culinary_mapping
+    df['culinary_group'] = df['food_group'].map(CULINARY_MAPPING).fillna("Other")
+
+    # Solve the Rice vs. Flour problem using case-insensitive regex matching
+    baking_keywords = r'flour|powder|starch|mix|blend'
+    is_grain = df['culinary_group'] == 'Whole_Grains_Carbs'
+    has_baking_keyword = df['description'].str.contains(baking_keywords, case=False, na=False)
+
+    # Re-route flours and baking ingredients into their own isolated group
+    df.loc[is_grain & has_baking_keyword, 'culinary_group'] = 'Baking_Ingredients'
+    
     _FOOD_DF = df # cache this clean dataframe into our global variable
 
-    # Extract just the nutrient columns. If any of the nutrients is missing, replace it with 0.0
-    feature_matrix = _FOOD_DF[NUTRIENT_FEATURES].fillna(0.0)
+    # Reset tracking objects to prevent stale states on hot-reload
+    _GROUP_MODELS.clear()
+    _GROUP_SCALERS.clear()
+    _GROUP_MATRICES.clear()
 
-    # 3. Scale Data
-    # Machine learning algos struggle if one feature is 0-2000 (calories) and another is 0 - 0.0005 (vitamins)
-    # The scale/number disparity is much too high for it to analyze
-    # StandardScaler transforms number so they have a mean of 0 and a variance of 1
-    _SCALER = StandardScaler()
-    _SCALED_MATRIX = _SCALER.fit_transform(feature_matrix) # uses the scaling and transforms the numbers
+    # 3. Train isolated models for each unique culinary group
+    unique_groups = _FOOD_DF['culinary_group'].unique()
+    
+    for group in unique_groups:
+        # Filter dataframe down to just this group's rows
+        group_df = _FOOD_DF[_FOOD_DF['culinary_group'] == group]
+        
+        # Pull out nutrient numbers and fill any missing gaps with zero
+        feature_matrix = group_df[NUTRIENT_FEATURES].fillna(0.0)
+        
+        # We need at least 2 items in a group to recommend something other than itself safely
+        if len(group_df) < 2:
+            continue
 
-    # 4. Train the AI Model
-    # Choosing metric = cosine means we look at the ratio of nutrients rather than the absolute weights. Just a preference of relation
-    # Algorithm = brute tells it to check every food option directly when finding matches
-    _KNN_MODEL = NearestNeighbors(n_neighbors=6, metric="cosine", algorithm="brute")
-    _KNN_MODEL.fit(_SCALED_MATRIX)
+        # Scale the features specifically relative to this group's norms
+        scaler = StandardScaler()
+        scaled_matrix = scaler.fit_transform(feature_matrix)
+        
+        # Fit a group-specific KNN model
+        knn_model = NearestNeighbors(metric="cosine", algorithm="brute")
+        knn_model.fit(scaled_matrix)
+        
+        # Cache objects into our global group dictionaries
+        _GROUP_SCALERS[group] = scaler
+        _GROUP_MATRICES[group] = scaled_matrix
+        _GROUP_MODELS[group] = knn_model
+        
+        print(f" -> Cluster '{group}': Fitted {len(group_df)} foods")
 
     print(f"{len(_FOOD_DF)} foods fitted")
 
 def find_similar_foods(food_id: int, n_recommendations: int = 5) -> list[int]:
     """ takes a single food ID and returns a list of IDs for most similar foods"""
     
-    global _FOOD_DF, _SCALED_MATRIX, _SCALER, _KNN_MODEL
+    global _FOOD_DF, __GROUP_MODELS, _GROUP_SCALERS, _GROUP_MATRICES
 
     # Make sure that the setup function above actually ran
     if _FOOD_DF is None or _KNN_MODEL is None:
@@ -80,22 +124,34 @@ def find_similar_foods(food_id: int, n_recommendations: int = 5) -> list[int]:
     if food_id not in _FOOD_DF.index:
         print(f"Food id {food_id} not found in pre-compiled dataset")
         return []
-    #Find the numeric index (row position) of our specific food ID
-    food_idx = _FOOD_DF.index.get_loc(food_id)
 
-    # Pull the row of scaled nutrients for this food
-    # .reshape(1, -1) converts it from a flat array into a 2D matrix layout because scikit needs 2D inputs
-    food_vector = _SCALED_MATRIX[food_idx].reshape(1, -1)
+    # Find what culinary group the target food is in:
+    target_food = _FOOD_DF.loc[food_id]
+    group = target_food['culinary_group']
 
-    # Ask the model for the closest matches
-    # Asking for (n_recommendations + 1) beacuse the absolute closest match to a food is ALWAYS itself
-    distances, indices = _KNN_MODEL.kneighbors(food_vector, n_neighbors=n_recommendations + 1)
+    if group not in _GROUP_MODELS:
+        print(f"No recommendation sub-model available for group cluster: {group}")
+        return []
+
+    # isolate the data structures assigned to this specific group
+    group_df = _FOOD_DF[_FOOD_DF['culinary_group'] == group]
+    scaler = _GROUP_SCALERS[group]
+    scaled_matrix = _GROUP_MATRICES[group]
+    knn_model = _GROUP_MODELS[group]
+
+    # find the position of our food within this group's localized matrix
+    group_local_idx = group_df.index.get_loc(food_id)
+    food_vector = scaled_matrix[group_local_idx].reshape(1, -1)
     
-    # Look up the actual food IDs using the position indices returned by the model
-    recommended_ids = _FOOD_DF.index[indices[0]].tolist()
+    # Query the group-restricted model
+    # dynamically cap neighbors requested based on total group size to prevent out-of-bounds requests
+    max_neighbors = min(n_recommendations + 1, len(group_df))
+    distances, indices = knn_model.kneighbors(food_vector, n_neighbors=max_neighbors)
 
-    # Filter out the original food item so we don't recommend a banana to someone looking for a substitute for a banana
+    # Map localized row positions back to actual database fdc_ids
+    recommended_ids = group_df.index[indices[0]].tolist()
+
+    # Filter out the source item itself
     filtered_recs = [rid for rid in recommended_ids if rid != food_id]
 
-    # Return only the requested number of items, just in case filtering didn't work perfectly
     return filtered_recs[:n_recommendations]
