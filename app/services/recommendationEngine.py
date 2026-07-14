@@ -22,7 +22,7 @@ CULINARY_MAPPING = {
     "Finfish and Shellfish Products": "Animal_Protein",
     "Dairy and Egg Products": "Animal_Protein",
     "Grains and Pasta": "Whole_Grains_Carbs",
-    "Cereal Grains": "Whole_Grains_Carbs",
+    "Cereal Grains and Pasta": "Whole_Grains_Carbs",
     "Vegetables and Vegetable Products": "Produce_Vegetables",
     "Fruits and Fruit Juices": "Produce_Fruits",
     "Legumes and Legume Products": "Plant_Protein_Carbs",
@@ -41,7 +41,7 @@ def initialize_recommendation_engine(db: Session):
     """Runs once when the server starts. It grabs the food data, prepares it, and then builds the recommendation model off of it"""
 
     # Tell python we want to modify the global variables declaread outside of this function
-    global _FOOD_DF, __GROUP_MODELS, _GROUP_SCALERS, _GROUP_MATRICES
+    global _FOOD_DF, _GROUP_MODELS, _GROUP_SCALERS, _GROUP_MATRICES
 
     print("Loading Food Table and Nutrient Stuffs")
 
@@ -115,10 +115,10 @@ def initialize_recommendation_engine(db: Session):
 def find_similar_foods(food_id: int, n_recommendations: int = 5) -> list[int]:
     """ takes a single food ID and returns a list of IDs for most similar foods"""
     
-    global _FOOD_DF, __GROUP_MODELS, _GROUP_SCALERS, _GROUP_MATRICES
+    global _FOOD_DF, _GROUP_MODELS, _GROUP_SCALERS, _GROUP_MATRICES
 
     # Make sure that the setup function above actually ran
-    if _FOOD_DF is None or _KNN_MODEL is None:
+    if _FOOD_DF is None or _GROUP_MODELS is None:
         raise RuntimeError("Recommendation Engine not initialized")
     # Make sure the requested food actually exists in our data
     if food_id not in _FOOD_DF.index:
