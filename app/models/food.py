@@ -14,6 +14,7 @@ class Food(Base):
     description = Column(String)
 
     food_group = Column(String, nullable=True)
+
     
     Protein = Column(Float)
     Fats = Column(Float)
