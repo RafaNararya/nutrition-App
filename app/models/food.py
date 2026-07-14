@@ -12,6 +12,9 @@ class Food(Base):
     #In this, and every database case, Binary Trees are used, but look up times is still fast O(log(n))
 
     description = Column(String)
+
+    food_group = Column(String, nullable=True)
+    
     Protein = Column(Float)
     Fats = Column(Float)
     Carbs = Column(Float)
