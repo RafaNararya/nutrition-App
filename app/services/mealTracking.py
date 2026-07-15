@@ -76,6 +76,7 @@ def get_summary(db: Session, user_id: int):
     # Dynamically allocate memory structures for the response payload using nested dictionary comprehension.
     # Coercing nutrient strings to lowercase prevents case-mismatch processing bugs on the client-side/frontend application layer.
     summary = {
+        "targets": user_targets,
         "panels": {panel_name: {nut.lower(): 0.0 for nut in nut_list} for panel_name, nut_list in panels.items()},
         "meals_logged": [] # A nested array to hold the itemized breakdown
     }

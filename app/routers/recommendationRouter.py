@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.utils.db import get_db
 from app.models.food import Food
 from app.services.recommendationEngine import find_similar_foods
+from app.services.mealTracking import get_summary
+from app.services.deficitEngine import recommend_deficit, calculate_deficit_vector
 
 router = APIRouter(prefix="/recommendations", tags=["Some Recommendations"])
 
@@ -77,4 +79,21 @@ def get_food_substitutions(food_id: int, db: Session = Depends(get_db)):
         "source_food_id": food_id,
         "substitutions_found": len(response_payload),
         "reccommendations": response_payload
+    }
+
+
+@router.get("/deficit/{user_id}")
+def get_deficit_recommendations(user_id: int, db: Session = Depends(get_db)):
+    summary = get_summary(db, user_id)
+    if "Error" in summary:
+        raise HTTPException(status_code=404, detail=summary["Error"])
+    
+    recommendations = recommend_deficit(summary, limit=5)
+
+    return {
+        "user_id": user_id,
+        "current_deficits": {
+            k: round(v, 1) for k, v in calculate_deficit_vector(summary).items() if v > 0
+        },
+        "recommended_plugs": recommendations
     }
