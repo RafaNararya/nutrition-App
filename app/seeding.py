@@ -1,11 +1,16 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
+from pathlib import Path
+from utils.db import engine
+
+BASE_DIR = Path(__file__).resolve().parent
+CSV_DIR = BASE_DIR / "csvFiles"
 
 #Read all the information that's needed from the USDA CSVs
-food = pd.read_csv("csvFiles/food.csv")
-foodNutrient = pd.read_csv("csvFiles/food_nutrient.csv", low_memory = False)
-nutrient = pd.read_csv("csvFiles/nutrient.csv")
-foodCategory = pd.read_csv("csvFiles/food_category.csv")
+food = pd.read_csv(CSV_DIR / "food.csv")
+foodNutrient = pd.read_csv(CSV_DIR / "food_nutrient.csv", low_memory=False)
+nutrient = pd.read_csv(CSV_DIR / "nutrient.csv")
+foodCategory = pd.read_csv(CSV_DIR / "food_category.csv")
 
 #Highlight the nutrients needed (Calories, Carbs, Fats, Protein)
 #Added: Micronutrient Panel (IDs based on their official USDA Database Keys)
@@ -78,8 +83,6 @@ if 'index' in minimizedTable.columns:
 minimizedTable = minimizedTable.drop(columns=['food_category_id'], errors='ignore')
 minimizedTable = minimizedTable.reset_index(drop=True) # drop=True prevents creating a new 'index' column
 
-# Initialize the SQLAlchemy engine object to manage our connection pool to PostgreSQL.
-engine = create_engine("postgresql://nutrition_user:RafasNutrition1502@localhost:5432/nutrition_app")
 
 with engine.connect() as conn:
     # CRITICAL RELATIONAL STEP: 'CASCADE' instructs PostgreSQL to break the data shield.
