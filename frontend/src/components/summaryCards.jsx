@@ -1,9 +1,11 @@
 export default function SummaryCards({ summary }) {
-  // Fallback defaults if no data is loaded yet
-  const calories = summary?.total_calories || 0;
-  const protein = summary?.total_protein || 0;
-  const carbs = summary?.total_carbs || 0;
-  const fats = summary?.total_fat || 0;
+  // Extract macros directly from backend nested panel response structure
+  const macros = summary?.panels?.macros || {};
+
+  const calories = macros.calories ?? 0;
+  const protein = macros.protein ?? 0;
+  const carbs = macros.carbs ?? 0;
+  const fats = macros.fats ?? 0;
 
   const cards = [
     { title: 'Calories', value: `${calories} kcal`, color: 'text-blue-400', border: 'border-blue-500/30' },

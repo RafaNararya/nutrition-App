@@ -13,7 +13,10 @@ const api = axios.create({
 // Helper functions for your OpenAPI routes
 export const getStatus = () => api.get('/status');
 
-export const searchFood = (query) => api.get(`/search`, { params: { q: query } });
+export const searchFood = (query) => {
+  // Send parameter name as 'query' instead of 'q'
+  return api.get('/search', { params: { query } });
+};
 
 export const registerUser = (userData) => api.post('/users/', userData);
 

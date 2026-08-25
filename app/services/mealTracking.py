@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.models.meal import mealLog
 from app.schemas.meal_schema import MealLogCreate
 from app.models.food import Food
-from datetime import datetime, time, timezone
+from datetime import datetime, timezone
 from app.models.user import User
 from app.services.profileEngine import calculate_user_values
 
@@ -40,9 +41,28 @@ def delete_meal(db: Session, meal_log_id: int, user_id: int) -> bool:
 # The point of this function is to pull up every meal that the specific user has ever logged. for user's sake
 def get_user_logs(db: Session, user_id: int):
     
-    return db.query(mealLog).filter(mealLog.user_id == user_id).all()
-    # SELECT * FROM meal_logs WHERE user_id = user_id
+    # SELECT meal_logs.*, usda_foods.description AS food_name FROM meal_logs JOIN usda_foods ON meal_logs.food_id = usda_foods.fdc_id WHERE user_id = user_id
+    results = (
+        db.query(mealLog, Food.description.label("food_name"))
+        .join(Food, mealLog.food_id == Food.fdc_id)
+        .filter(mealLog.user_id == user_id)
+        .all()
+    )
+    
+    # Map into a JSON-serializable structure including food_name for front-end rendering
+    logs = []
+    for log, food_name in results:
+        logs.append({
+            "id": log.id,
+            "user_id": log.user_id,
+            "food_id": log.food_id,
+            "quantity_grams": log.quantity_grams,
+            "created_at": log.created_at,
+            "food_name": food_name
+        })
+        
     #.all() is the secret part that converts this from a database cursor/call to a python list
+    return logs
 
 
 def get_summary(db: Session, user_id: int):
@@ -52,12 +72,16 @@ def get_summary(db: Session, user_id: int):
     
     user_targets = calculate_user_values(user)
 
-    now = datetime.now(timezone.utc)
-    dayStart = datetime.combine(now.date(), time.min, tzinfo = timezone.utc)
-    dayEnd = datetime.combine(now.date(), time.max, tzinfo = timezone.utc)
+    today = datetime.now(timezone.utc).date()
 
-    food_logs = (db.query(mealLog,Food).join(Food, mealLog.food_id == Food.fdc_id).filter(mealLog.user_id == user_id).filter(mealLog.created_at >= dayStart).filter(mealLog.created_at <= dayEnd).all())
-
+    # Query today's logs using func.date to match server and database date bounds
+    food_logs = (
+        db.query(mealLog, Food)
+        .join(Food, mealLog.food_id == Food.fdc_id)
+        .filter(mealLog.user_id == user_id)
+        .filter(func.date(mealLog.created_at) == today)
+        .all()
+    )
 
 
     # Group columns by logical front-end presentation panels.

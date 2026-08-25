@@ -6,9 +6,8 @@ export default function FoodSearch({ userId, onMealLogged }) {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   
-  // Selection & Modal States
   const [selectedFood, setSelectedFood] = useState(null);
-  const [portion, setPortion] = useState(1);
+  const [portionGrams, setPortionGrams] = useState(100);
   const [substitutions, setSubstitutions] = useState([]);
   const [logging, setLogging] = useState(false);
   const [message, setMessage] = useState('');
@@ -31,12 +30,11 @@ export default function FoodSearch({ userId, onMealLogged }) {
 
   const handleSelectFood = async (food) => {
     setSelectedFood(food);
-    setPortion(1);
+    setPortionGrams(100);
     setSubstitutions([]);
     setMessage('');
 
-    // Fetch substitutions if food ID is present
-    const foodId = food.id || food.food_id;
+    const foodId = food.fdc_id || food.id;
     if (foodId) {
       try {
         const subRes = await getFoodSubstitutions(foodId);
@@ -53,10 +51,11 @@ export default function FoodSearch({ userId, onMealLogged }) {
     setLogging(true);
     setMessage('');
 
+    // Field key updated to quantity_grams to match backend Pydantic model
     const mealData = {
       user_id: userId,
-      food_id: selectedFood.id || selectedFood.food_id,
-      quantity: parseFloat(portion) || 1,
+      food_id: selectedFood.fdc_id || selectedFood.id,
+      quantity_grams: parseFloat(portionGrams) || 100.0,
     };
 
     try {
@@ -74,7 +73,6 @@ export default function FoodSearch({ userId, onMealLogged }) {
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
       <form onSubmit={handleSearch} className="flex gap-3">
         <input
           type="text"
@@ -92,45 +90,54 @@ export default function FoodSearch({ userId, onMealLogged }) {
         </button>
       </form>
 
-      {/* Results Grid */}
       {results.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {results.map((item, idx) => (
-            <div
-              key={item.id || item.food_id || idx}
-              className="bg-slate-800 border border-slate-700 p-5 rounded-xl flex flex-col justify-between hover:border-slate-500 transition-colors"
-            >
-              <div>
-                <h4 className="font-bold text-lg text-white mb-2">
-                  {item.name || item.food_name || 'Unknown Item'}
-                </h4>
-                <div className="text-xs text-slate-400 space-y-1">
-                  <p>Calories: <span className="text-blue-400 font-semibold">{item.calories || 0} kcal</span></p>
-                  <p>Protein: <span className="text-emerald-400 font-semibold">{item.protein || 0}g</span> | Carbs: <span className="text-amber-400 font-semibold">{item.carbs || 0}g</span> | Fats: <span className="text-purple-400 font-semibold">{item.fat || item.fats || 0}g</span></p>
-                </div>
-              </div>
+          {results.map((item, idx) => {
+            const fdcId = item.fdc_id || item.id || idx;
+            const name = item.description || item.food_name || item.name || 'Unknown Item';
+            const calories = item.Calories ?? item.calories ?? 0;
+            const protein = item.Protein ?? item.protein ?? 0;
+            const carbs = item.Carbs ?? item.carbs ?? 0;
+            const fats = item.Fats ?? item.fats ?? item.fat ?? 0;
 
-              <button
-                onClick={() => handleSelectFood(item)}
-                className="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+            return (
+              <div
+                key={fdcId}
+                className="bg-slate-800 border border-slate-700 p-5 rounded-xl flex flex-col justify-between hover:border-slate-500 transition-colors"
               >
-                Select & Log
-              </button>
-            </div>
-          ))}
+                <div>
+                  <h4 className="font-bold text-lg text-white mb-2">{name}</h4>
+                  <div className="text-xs text-slate-400 space-y-1">
+                    <p>Calories (per 100g): <span className="text-blue-400 font-semibold">{calories} kcal</span></p>
+                    <p>
+                      Protein: <span className="text-emerald-400 font-semibold">{protein}g</span> | 
+                      Carbs: <span className="text-amber-400 font-semibold">{carbs}g</span> | 
+                      Fats: <span className="text-purple-400 font-semibold">{fats}g</span>
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleSelectFood(item)}
+                  className="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+                >
+                  Select & Log
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Logging & Substitutions Panel */}
       {selectedFood && (
         <div className="bg-slate-800 border border-blue-500/50 p-6 rounded-xl shadow-lg space-y-4">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-xl font-bold text-white">
-                Log {selectedFood.name || selectedFood.food_name}
+                Log {selectedFood.description || selectedFood.food_name || selectedFood.name}
               </h3>
               <p className="text-sm text-slate-400 mt-1">
-                Base Calories: {selectedFood.calories || 0} kcal per serving
+                Base Calories: {selectedFood.Calories ?? selectedFood.calories ?? 0} kcal per 100g
               </p>
             </div>
             <button
@@ -142,14 +149,14 @@ export default function FoodSearch({ userId, onMealLogged }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <label className="text-sm text-slate-300 font-medium">Serving Quantity:</label>
+            <label className="text-sm text-slate-300 font-medium">Quantity (grams):</label>
             <input
               type="number"
-              min="0.1"
-              step="0.1"
-              value={portion}
-              onChange={(e) => setPortion(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-white w-24 focus:outline-none focus:border-blue-500"
+              min="1"
+              step="5"
+              value={portionGrams}
+              onChange={(e) => setPortionGrams(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-white w-28 focus:outline-none focus:border-blue-500"
             />
             <button
               onClick={handleLogMeal}
@@ -166,7 +173,6 @@ export default function FoodSearch({ userId, onMealLogged }) {
             </p>
           )}
 
-          {/* Substitutions */}
           {substitutions.length > 0 && (
             <div className="mt-4 pt-4 border-t border-slate-700">
               <h4 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
@@ -179,7 +185,7 @@ export default function FoodSearch({ userId, onMealLogged }) {
                     onClick={() => handleSelectFood(sub)}
                     className="bg-slate-700/60 hover:bg-slate-700 border border-slate-600 text-xs text-slate-300 px-3 py-1.5 rounded-md transition-colors"
                   >
-                    {sub.name || sub.food_name} ({sub.calories || 0} kcal)
+                    {sub.description || sub.food_name || sub.name} ({sub.Calories ?? sub.calories ?? 0} kcal)
                   </button>
                 ))}
               </div>

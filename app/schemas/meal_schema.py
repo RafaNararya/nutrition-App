@@ -19,6 +19,7 @@ class MealLogOut(BaseModel):
     quantity_grams: float
     created_at: datetime #This is so that Postgres can create a timestamp, so that we can print it out for the user to see
     # Something like "Logged at 12:30 pm EST" or something
+    food_name: Optional[str] = None
 
     class Config:
         from_attributes = True
