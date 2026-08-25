@@ -6,6 +6,7 @@ from app.models import food, meal, user
 from app.utils.db import Base, engine, sessionLocal
 from contextlib import asynccontextmanager
 from app.services.recommendationEngine import initialize_recommendation_engine
+from fastapi.middleware.cors import CORSMiddleware
 
 # an 'asynccontextmanager' controls startup and shutdown events
 # Anything written BEFORE the "yield" statement happens when the app wakes up
@@ -30,6 +31,23 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+
+
+
 app.include_router(testRouter.router)
 #.include_router("routerFileName".router): should be done for every new router file
 
