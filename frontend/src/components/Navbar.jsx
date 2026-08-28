@@ -1,4 +1,4 @@
-export default function Navbar({ activeTab, setActiveTab }) {
+export default function Navbar({ activeTab, setActiveTab, username, onLogout }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'search', label: 'Food Search' },
@@ -16,20 +16,34 @@ export default function Navbar({ activeTab, setActiveTab }) {
         </span>
       </div>
 
-      <div className="flex space-x-2">
-        {tabs.map((tab) => (
+      <div className="flex items-center space-x-4">
+        <div className="flex space-x-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="h-6 w-px bg-slate-700" />
+
+        <div className="flex items-center space-x-3">
+          <span className="text-xs text-slate-300 font-medium">{username}</span>
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
-              activeTab === tab.id
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-            }`}
+            onClick={onLogout}
+            className="text-xs text-slate-400 hover:text-red-400 transition-colors"
           >
-            {tab.label}
+            Sign Out
           </button>
-        ))}
+        </div>
       </div>
     </nav>
   );

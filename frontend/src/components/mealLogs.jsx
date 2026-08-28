@@ -8,7 +8,7 @@ export default function MealLogs({ logs, userId, onLogDeleted }) {
     setDeletingId(mealLogId);
     try {
       await removeMealLog(userId, mealLogId);
-      onLogDeleted(); // Triggers a parent state refresh
+      if (onLogDeleted) onLogDeleted();
     } catch (err) {
       console.error('Error deleting meal log:', err);
     } finally {
@@ -34,24 +34,29 @@ export default function MealLogs({ logs, userId, onLogDeleted }) {
       </div>
 
       <div className="divide-y divide-slate-700/60">
-        {logs.map((log) => (
-          <div key={log.id || log.meal_log_id} className="p-4 flex items-center justify-between hover:bg-slate-750 transition-colors">
-            <div>
-              <p className="font-semibold text-white">{log.food_name || log.name || `Food Item #${log.food_id}`}</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Portion: <span className="text-slate-300">{log.quantity || log.portion || 1} serving</span> | Calories: <span className="text-blue-400">{log.calories || 0} kcal</span>
-              </p>
-            </div>
+        {logs.map((log) => {
+          const logId = log.id || log.meal_log_id;
+          const portion = log.quantity_grams || log.grams || 100;
 
-            <button
-              onClick={() => handleDelete(log.id || log.meal_log_id)}
-              disabled={deletingId === (log.id || log.meal_log_id)}
-              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
-            >
-              {deletingId === (log.id || log.meal_log_id) ? 'Removing...' : 'Delete'}
-            </button>
-          </div>
-        ))}
+          return (
+            <div key={logId} className="p-4 flex items-center justify-between hover:bg-slate-750 transition-colors">
+              <div>
+                <p className="font-semibold text-white">{log.food_name || `Food Item #${log.food_id}`}</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Portion: <span className="text-slate-300">{portion}g</span>
+                </p>
+              </div>
+
+              <button
+                onClick={() => handleDelete(logId)}
+                disabled={deletingId === logId}
+                className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+              >
+                {deletingId === logId ? 'Removing...' : 'Delete'}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
