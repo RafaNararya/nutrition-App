@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from app.utils.db import get_db
-from app.schemas.user_schema import UserCreate, UserOut, userProfileUpdate
+from app.schemas.user_schema import UserCreate, UserOut, userProfileUpdate, UserLogin
 from app.services import userServices
+from app.services import userService
 
 #Prefix /users means all routes here start with http://localhost:8000/users
 #tags= makes it so that routes are easily findable in SwaggerUI (localhost/docs)
@@ -17,7 +18,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Depends(get_db): This is "Dependency Injection." 
     # It opens a database connection before the function starts and closes it when it's done. 
     # This prevents your app from leaking memory or crashing Postgres with too many idle connections.
-    return userServices.create_user(db = db, user = user)
+    return userService.create_user(db = db, user = user)
 
 # .put() keyword is equivalent to a theme of "updating" already established information
 # kinda like when an initial profile is created, that will use a .post()
@@ -32,3 +33,8 @@ def update_profile(user_id: int, profile: userProfileUpdate, db: Session = Depen
         raise HTTPException(status_code = 404, detail = "User not Found")
     
     return updated_user
+
+
+@router.post("/login", response_model=UserOut)
+def login_user(login_data: UserLogin, db: Session = Depends(get_db)):
+    return userService.authenticate_user(db, login_data)

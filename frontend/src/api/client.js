@@ -38,4 +38,9 @@ export const getFoodSubstitutions = (foodId) =>
 export const getDeficitRecommendations = (userId) =>
   api.get(`/recommendations/deficit/${userId}`);
 
+export const loginUser = async (credentials) => {
+  // credentials = { username, password }
+  return await api.post('/users/login', credentials);
+};
+
 export default api;

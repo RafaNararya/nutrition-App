@@ -78,7 +78,7 @@ def get_food_substitutions(food_id: int, db: Session = Depends(get_db)):
     return {
         "source_food_id": food_id,
         "substitutions_found": len(response_payload),
-        "reccommendations": response_payload
+        "recommendations": response_payload
     }
 
 

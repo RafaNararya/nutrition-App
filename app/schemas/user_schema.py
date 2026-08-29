@@ -9,6 +9,11 @@ from app.models.user import ActivityLevel
 class UserCreate(BaseModel):
     username: str
     email: EmailStr #EmailStr from pydantic makes it so it ensures users type in an "@" and a "."
+    password: str  # <-- Required for registration
+
+class UserLogin(BaseModel):
+    username: str  # <-- Username + Password login
+    password: str
 
 #Output Blueprint 
 class UserOut(BaseModel):

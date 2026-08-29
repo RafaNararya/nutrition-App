@@ -38,9 +38,12 @@ export default function FoodSearch({ userId, onMealLogged }) {
     if (foodId) {
       try {
         const subRes = await getFoodSubstitutions(foodId);
-        setSubstitutions(Array.isArray(subRes.data) ? subRes.data : []);
+        // Access inner recommendations array returned by FastAPI
+        const subsList = subRes.data?.recommendations || subRes.data?.reccommendations || [];
+        setSubstitutions(Array.isArray(subsList) ? subsList : []);
       } catch (err) {
         console.error('Substitutions error:', err);
+        setSubstitutions([]);
       }
     }
   };
@@ -51,7 +54,6 @@ export default function FoodSearch({ userId, onMealLogged }) {
     setLogging(true);
     setMessage('');
 
-    // Field key updated to quantity_grams to match backend Pydantic model
     const mealData = {
       user_id: userId,
       food_id: selectedFood.fdc_id || selectedFood.id,
@@ -129,68 +131,76 @@ export default function FoodSearch({ userId, onMealLogged }) {
         </div>
       )}
 
+      {/* POPUP MODAL OVERLAY */}
       {selectedFood && (
-        <div className="bg-slate-800 border border-blue-500/50 p-6 rounded-xl shadow-lg space-y-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-xl font-bold text-white">
-                Log {selectedFood.description || selectedFood.food_name || selectedFood.name}
-              </h3>
-              <p className="text-sm text-slate-400 mt-1">
-                Base Calories: {selectedFood.Calories ?? selectedFood.calories ?? 0} kcal per 100g
-              </p>
-            </div>
-            <button
-              onClick={() => setSelectedFood(null)}
-              className="text-slate-400 hover:text-white text-sm"
-            >
-              ✕ Close
-            </button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <label className="text-sm text-slate-300 font-medium">Quantity (grams):</label>
-            <input
-              type="number"
-              min="1"
-              step="5"
-              value={portionGrams}
-              onChange={(e) => setPortionGrams(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-white w-28 focus:outline-none focus:border-blue-500"
-            />
-            <button
-              onClick={handleLogMeal}
-              disabled={logging}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {logging ? 'Recording...' : 'Record Meal'}
-            </button>
-          </div>
-
-          {message && (
-            <p className={`text-sm ${message.includes('successfully') ? 'text-emerald-400' : 'text-red-400'}`}>
-              {message}
-            </p>
-          )}
-
-          {substitutions.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-700">
-              <h4 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
-                Recommended Substitutions
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {substitutions.map((sub, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleSelectFood(sub)}
-                    className="bg-slate-700/60 hover:bg-slate-700 border border-slate-600 text-xs text-slate-300 px-3 py-1.5 rounded-md transition-colors"
-                  >
-                    {sub.description || sub.food_name || sub.name} ({sub.Calories ?? sub.calories ?? 0} kcal)
-                  </button>
-                ))}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-xl p-6 rounded-xl shadow-2xl space-y-4 relative">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-xl font-bold text-white">
+                  Log {selectedFood.description || selectedFood.food_name || selectedFood.name}
+                </h3>
+                <p className="text-sm text-slate-400 mt-1">
+                  Base Calories: {selectedFood.Calories ?? selectedFood.calories ?? 0} kcal per 100g
+                </p>
               </div>
+              <button
+                onClick={() => setSelectedFood(null)}
+                className="text-slate-400 hover:text-white text-sm font-semibold p-1"
+              >
+                ✕ Close
+              </button>
             </div>
-          )}
+
+            {/* Inputs & Action */}
+            <div className="flex items-center gap-4 py-2">
+              <label className="text-sm text-slate-300 font-medium">Quantity (grams):</label>
+              <input
+                type="number"
+                min="1"
+                step="5"
+                value={portionGrams}
+                onChange={(e) => setPortionGrams(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white w-28 text-center focus:outline-none focus:border-blue-500 font-semibold"
+              />
+              <button
+                onClick={handleLogMeal}
+                disabled={logging}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {logging ? 'Recording...' : 'Record Meal'}
+              </button>
+            </div>
+
+            {message && (
+              <p className={`text-sm ${message.includes('successfully') ? 'text-emerald-400' : 'text-red-400'}`}>
+                {message}
+              </p>
+            )}
+
+            {/* Substitutions */}
+            {substitutions.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-800">
+                <h4 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
+                  Recommended Alternatives
+                </h4>
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1">
+                  {substitutions.map((sub, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSelectFood(sub)}
+                      className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 px-3 py-1.5 rounded-md transition-colors text-left"
+                    >
+                      {sub.description || sub.food_name || sub.name} ({sub.Calories ?? sub.calories ?? 0} kcal)
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
     </div>
