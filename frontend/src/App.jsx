@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import SummaryCards from './components/summaryCards';
+import MicronutrientDashboard from './components/micronutrientdashboard'; // 1. Added Import
 import MealLogs from './components/mealLogs';
 import FoodSearch from './components/foodSearch';
 import AuthModal from './components/AuthModal';
@@ -82,7 +83,13 @@ export default function App() {
               <div className="text-slate-400 animate-pulse">Loading dashboard data...</div>
             ) : (
               <>
+                {/* 1. Macro Summary Cards */}
                 <SummaryCards summary={summary} />
+
+                {/* 2. Micronutrient Visualizer Panel */}
+                <MicronutrientDashboard summary={summary} />
+
+                {/* 3. Logged Meals List */}
                 <MealLogs logs={logs} userId={activeUser.id} onLogDeleted={fetchDashboardData} />
               </>
             )}

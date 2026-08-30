@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.user_schema import UserCreate, userProfileUpdate
 
-def create_user(db: Session, user: UserCreate):
+"""def create_user(db: Session, user: UserCreate):
     #Take the UserCreate (Which Holds JSON Data) and turn it into a User Object
     #Just a reminder that the User object in app/models takes in an ID, Username, and Email
     #This needs to be done so it can be added into the actual Database (Postgres) or else nothing can be read in by Postgres
@@ -17,7 +17,7 @@ def create_user(db: Session, user: UserCreate):
     #It's going to be automatically done by Postgres. it should be done like this.
     #Hitting refresh on the DB basically forces Postgres to auto-assign the "non-IDed object" with an ID
     db.refresh(new_user)
-    return new_user
+    return new_user"""
 
 def updateUser(db: Session, user_id: int, profile_info: userProfileUpdate):
     # Look for the first user in the database that has a match for the user_id

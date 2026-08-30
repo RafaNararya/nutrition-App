@@ -7,9 +7,9 @@ services:
     container_name: nutrition_postgres
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${DB_NAME:-nutritiondb}
     ports:
       - "5433:5432"
     volumes:
@@ -29,20 +29,19 @@ services:
       dockerfile: Dockerfile
     container_name: nutrition_api
     restart: always
-    # Automatically seed the database, then launch the API:
     command: sh -c "python app/seeding.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     environment:
-      - DB_USER=postgres
-      - DB_PASSWORD=postgrespassword
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgrespassword}
       - DB_HOST=postgres_db
       - DB_PORT=5432
-      - DB_NAME=nutritiondb
+      - DB_NAME=${DB_NAME:-nutritiondb}
     depends_on:
       postgres_db:
         condition: service_healthy
 
 volumes:
   postgres_data:
-    driver: local 
+    driver: local

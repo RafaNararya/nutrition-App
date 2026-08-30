@@ -86,17 +86,18 @@ minimizedTable = minimizedTable.reset_index(drop=True) # drop=True prevents crea
 
 with engine.connect() as conn:
     # CRITICAL RELATIONAL STEP: 'CASCADE' instructs PostgreSQL to break the data shield.
-    # It drops 'usda_foods' and forcibly severs any active Foreign Key constraints on 'meal_logs' 
-    # pointing to it. Without CASCADE, the SQL engine returns a constraint violation error and aborts.
     conn.execute(text("DROP TABLE IF EXISTS usda_foods CASCADE;"))
     conn.commit()
     print("Forced drop of usda_foods table completed.")
 
-
 # Bulk insert the sanitized DataFrame into the database.
-# 'if_exists=fail' acts as a safeguard to ensure it doesn't accidentally overwrite data 
-# if the drop step failed to execute completely.
 minimizedTable.to_sql('usda_foods', engine, if_exists='fail', index=False)
 print("Database heavily re-seeded with extensive nutritional panels and food groups!")
+
+# FIX: Add the Primary Key constraint to fdc_id so foreign keys can target it
+with engine.connect() as conn:
+    conn.execute(text("ALTER TABLE usda_foods ADD PRIMARY KEY (fdc_id);"))
+    conn.commit()
+    print("Primary key constraint added to usda_foods(fdc_id).")
 
 

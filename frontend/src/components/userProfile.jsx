@@ -36,7 +36,6 @@ export default function UserProfile({ activeUser }) {
       <div className="bg-slate-800 border border-slate-700 p-6 rounded-xl">
         <h3 className="text-lg font-bold text-white">Account Details</h3>
         <div className="mt-3 text-sm space-y-1 text-slate-300">
-          <p><span className="text-slate-400">User ID:</span> <span className="font-mono text-blue-400">#{activeUser.id}</span></p>
           <p><span className="text-slate-400">Username:</span> {activeUser.username}</p>
           {activeUser.email && <p><span className="text-slate-400">Email:</span> {activeUser.email}</p>}
         </div>

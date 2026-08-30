@@ -18,7 +18,7 @@ export const searchFood = (query) => {
   return api.get('/search', { params: { query } });
 };
 
-export const registerUser = (userData) => api.post('/users/', userData);
+export const registerUser = (userData) => api.post('/users', userData);
 
 export const updateUserProfile = (userId, profileData) =>
   api.put(`/users/profile/${userId}`, profileData);
