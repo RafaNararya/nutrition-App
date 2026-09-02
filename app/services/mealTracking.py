@@ -37,18 +37,21 @@ def delete_meal(db: Session, meal_log_id: int, user_id: int) -> bool:
     db.commit()
     return True
 
-
-# The point of this function is to pull up every meal that the specific user has ever logged. for user's sake
+# 1. UPDATED: Fetches ONLY TODAY'S logs for the main dashboard
 def get_user_logs(db: Session, user_id: int):
-    
+    today = datetime.now(timezone.utc).date()
+
     # SELECT meal_logs.*, usda_foods.description AS food_name FROM meal_logs JOIN usda_foods ON meal_logs.food_id = usda_foods.fdc_id WHERE user_id = user_id
     results = (
         db.query(mealLog, Food.description.label("food_name"))
         .join(Food, mealLog.food_id == Food.fdc_id)
         .filter(mealLog.user_id == user_id)
+        .filter(func.date(mealLog.created_at) == today)
+        .order_by(mealLog.created_at.desc())
         .all()
     )
-    
+
+
     # Map into a JSON-serializable structure including food_name for front-end rendering
     logs = []
     for log, food_name in results:
@@ -60,9 +63,38 @@ def get_user_logs(db: Session, user_id: int):
             "created_at": log.created_at,
             "food_name": food_name
         })
-        
-    #.all() is the secret part that converts this from a database cursor/call to a python list
+
+    #.all() is the secret part that converts this from a database cursor/call to a python list    
     return logs
+
+
+# Fetches UNIQUE past foods for quick re-logging (deduplicated by food_id)
+def get_user_history(db: Session, user_id: int):
+    # Order logs descending by creation time
+    all_logs = (
+        db.query(mealLog, Food.description.label("food_name"))
+        .join(Food, mealLog.food_id == Food.fdc_id)
+        .filter(mealLog.user_id == user_id)
+        .order_by(mealLog.created_at.desc())
+        .all()
+    )
+    
+    seen_foods = set()
+    history = []
+    
+    for log, food_name in all_logs:
+        if log.food_id not in seen_foods:
+            seen_foods.add(log.food_id)
+            history.append({
+                "id": log.id,
+                "user_id": log.user_id,
+                "food_id": log.food_id,
+                "quantity_grams": log.quantity_grams,
+                "created_at": log.created_at,
+                "food_name": food_name
+            })
+            
+    return history
 
 
 def get_summary(db: Session, user_id: int):

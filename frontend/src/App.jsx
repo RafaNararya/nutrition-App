@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import SummaryCards from './components/summaryCards';
-import MicronutrientDashboard from './components/micronutrientdashboard'; // 1. Added Import
+import MicronutrientDashboard from './components/micronutrientdashboard';
 import MealLogs from './components/mealLogs';
 import FoodSearch from './components/foodSearch';
+import MealHistory from './components/mealHistory';
 import AuthModal from './components/AuthModal';
 import UserProfile from './components/userProfile';
 import { getUserSummary, getUserLogs } from './api/client';
@@ -83,13 +84,9 @@ export default function App() {
               <div className="text-slate-400 animate-pulse">Loading dashboard data...</div>
             ) : (
               <>
-                {/* 1. Macro Summary Cards */}
                 <SummaryCards summary={summary} />
-
-                {/* 2. Micronutrient Visualizer Panel */}
                 <MicronutrientDashboard summary={summary} />
-
-                {/* 3. Logged Meals List */}
+                {/* Shows ONLY today's logged meals */}
                 <MealLogs logs={logs} userId={activeUser.id} onLogDeleted={fetchDashboardData} />
               </>
             )}
@@ -101,6 +98,10 @@ export default function App() {
             <h2 className="text-2xl font-bold mb-6 text-white">Search & Log Foods</h2>
             <FoodSearch userId={activeUser.id} onMealLogged={fetchDashboardData} />
           </div>
+        )}
+
+        {activeTab === 'history' && (
+          <MealHistory userId={activeUser.id} onMealRelogged={fetchDashboardData} />
         )}
 
         {activeTab === 'profile' && (

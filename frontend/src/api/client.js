@@ -43,4 +43,6 @@ export const loginUser = async (credentials) => {
   return await api.post('/users/login', credentials);
 };
 
+export const getMealHistory = (userId) => api.get(`/meals/history/${userId}`);
+
 export default api;

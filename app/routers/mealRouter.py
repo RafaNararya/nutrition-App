@@ -21,6 +21,11 @@ def view_user_logs(user_id: int, db: Session = Depends(get_db)):
     # (e.g., /meals/1) gets passed into the function as the variable 'user_id'.
     return mealTracking.get_user_logs(db = db, user_id=user_id)
 
+# NEW: Returns ALL-TIME log history
+@router.get("/history/{user_id}", response_model=list[MealLogOut])
+def view_user_history(user_id: int, db: Session = Depends(get_db)):
+    return mealTracking.get_user_history(db = db, user_id=user_id)
+
 
 # Dynamic Path Parameter Endpoint: GET /meals/summary/{user_id}
 # Note: You didn't define a 'response_model' here yet. By default, FastAPI will automatically 

@@ -2,6 +2,7 @@ export default function Navbar({ activeTab, setActiveTab, username, onLogout }) 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'search', label: 'Food Search' },
+    { id: 'history', label: 'Meal History' },
     { id: 'profile', label: 'Profile' },
   ];
 
