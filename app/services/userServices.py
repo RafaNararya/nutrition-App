@@ -20,23 +20,35 @@ from app.schemas.user_schema import UserCreate, userProfileUpdate
     return new_user"""
 
 def updateUser(db: Session, user_id: int, profile_info: userProfileUpdate):
-    # Look for the first user in the database that has a match for the user_id
+    # Look for the user in the database
     db_user = db.query(User).filter(User.id == user_id).first()
 
-    # If user doesn't exist, return a 404 Error
     if not db_user:
         return None
 
-    # overwrite the previous biometric attributes with new, updated biometrics that follows the new schema data that is validated
+    # Helper to convert Enum to raw string if necessary
+    activity_val = profile_info.activity_level.value if hasattr(profile_info.activity_level, 'value') else profile_info.activity_level
+
+    # Overwrite previous biometric attributes
     db_user.age = profile_info.age
     db_user.gender = profile_info.gender
     db_user.weight_kg = profile_info.weight_kg
     db_user.height_cm = profile_info.height_cm
-    db_user.activity_level = profile_info.activity_level
+    db_user.activity_level = activity_val
 
-    #Kind of like Git, the first line prepares Postgres to receive the db_user object
-    #Commit finishes the deal and actually adds it into the database
     db.commit()
     db.refresh(db_user)
 
-    return db_user
+    # Convert object to dict to guarantee activity_level is a plain string in the JSON payload
+    user_dict = {
+        "id": db_user.id,
+        "username": db_user.username,
+        "email": db_user.email,
+        "age": db_user.age,
+        "gender": db_user.gender,
+        "weight_kg": db_user.weight_kg,
+        "height_cm": db_user.height_cm,
+        "activity_level": str(db_user.activity_level.value if hasattr(db_user.activity_level, 'value') else db_user.activity_level)
+    }
+
+    return user_dict

@@ -6,7 +6,10 @@ export default function FoodSearch({ userId, onMealLogged }) {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   
-  const [selectedFood, setSelectedFood] = useState(null);
+  const [selectedFood, setSelectedFood] = useState(null); // For logging modal
+  const [infoFood, setInfoFood] = useState(null); // For micronutrient breakdown view modal
+  const [activeMicroTab, setActiveMicroTab] = useState('minerals');
+
   const [portionGrams, setPortionGrams] = useState(100);
   const [substitutions, setSubstitutions] = useState([]);
   const [logging, setLogging] = useState(false);
@@ -38,7 +41,6 @@ export default function FoodSearch({ userId, onMealLogged }) {
     if (foodId) {
       try {
         const subRes = await getFoodSubstitutions(foodId);
-        // Access inner recommendations array returned by FastAPI
         const subsList = subRes.data?.recommendations || subRes.data?.reccommendations || [];
         setSubstitutions(Array.isArray(subsList) ? subsList : []);
       } catch (err) {
@@ -119,24 +121,220 @@ export default function FoodSearch({ userId, onMealLogged }) {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleSelectFood(item)}
-                  className="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium py-2 rounded-lg transition-colors"
-                >
-                  Select & Log
-                </button>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setInfoFood(item);
+                      setActiveMicroTab('minerals');
+                    }}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold py-2 rounded-lg transition-colors border border-slate-600"
+                  >
+                    ℹ️ Info
+                  </button>
+                  <button
+                    onClick={() => handleSelectFood(item)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                  >
+                    Select & Log
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* POPUP MODAL OVERLAY */}
+      {/* TABBED MICRONUTRIENT MODAL */}
+      {infoFood && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-xl p-6 rounded-xl shadow-2xl space-y-4 relative">
+            <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  {infoFood.description || infoFood.food_name || infoFood.name}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">Nutritional profile per 100g</p>
+              </div>
+              <button
+                onClick={() => setInfoFood(null)}
+                className="text-slate-400 hover:text-white text-sm font-semibold"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Macros Summary */}
+            <div className="grid grid-cols-4 gap-2 text-center bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Calories</p>
+                <p className="text-sm font-bold text-blue-400">{infoFood.Calories ?? 0} kcal</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Protein</p>
+                <p className="text-sm font-bold text-emerald-400">{infoFood.Protein ?? 0}g</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Carbs</p>
+                <p className="text-sm font-bold text-amber-400">{infoFood.Carbs ?? 0}g</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Fats</p>
+                <p className="text-sm font-bold text-purple-400">{infoFood.Fats ?? 0}g</p>
+              </div>
+            </div>
+
+            {/* Category Tabs Header */}
+            <div className="flex justify-between items-center pt-2">
+              <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Micronutrient Breakdown
+              </h4>
+              <div className="flex gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setActiveMicroTab('minerals')}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors ${
+                    activeMicroTab === 'minerals'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🧪 Minerals
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMicroTab('bcomplex')}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors ${
+                    activeMicroTab === 'bcomplex'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  💧 B-Complex
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMicroTab('antioxidants')}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors ${
+                    activeMicroTab === 'antioxidants'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🛡️ Vitamins
+                </button>
+              </div>
+            </div>
+
+            {/* Tab Content Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+              {activeMicroTab === 'minerals' && (
+                <>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Calcium</span>
+                    <span className="font-semibold text-slate-200">{infoFood.calcium ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Iron</span>
+                    <span className="font-semibold text-slate-200">{infoFood.iron ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Magnesium</span>
+                    <span className="font-semibold text-slate-200">{infoFood.magnesium ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Phosphorus</span>
+                    <span className="font-semibold text-slate-200">{infoFood.phosphorus ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Potassium</span>
+                    <span className="font-semibold text-slate-200">{infoFood.potassium ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Sodium</span>
+                    <span className="font-semibold text-slate-200">{infoFood.sodium ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Zinc</span>
+                    <span className="font-semibold text-slate-200">{infoFood.zinc ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Selenium</span>
+                    <span className="font-semibold text-slate-200">{infoFood.selenium ?? 0} mcg</span>
+                  </div>
+                </>
+              )}
+
+              {activeMicroTab === 'bcomplex' && (
+                <>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Thiamin (B1)</span>
+                    <span className="font-semibold text-slate-200">{infoFood.thiamin ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Riboflavin (B2)</span>
+                    <span className="font-semibold text-slate-200">{infoFood.riboflavin ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Niacin (B3)</span>
+                    <span className="font-semibold text-slate-200">{infoFood.niacin ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Pantothenic Acid (B5)</span>
+                    <span className="font-semibold text-slate-200">{infoFood.pantothenic_acid ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Vitamin B6</span>
+                    <span className="font-semibold text-slate-200">{infoFood.vitamin_b6 ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Folate (B9)</span>
+                    <span className="font-semibold text-slate-200">{infoFood.folate ?? 0} mcg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Vitamin B12</span>
+                    <span className="font-semibold text-slate-200">{infoFood.vitamin_b12 ?? 0} mcg</span>
+                  </div>
+                </>
+              )}
+
+              {activeMicroTab === 'antioxidants' && (
+                <>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Vitamin A</span>
+                    <span className="font-semibold text-slate-200">{infoFood.vitamin_a ?? 0} mcg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Vitamin C</span>
+                    <span className="font-semibold text-slate-200">{infoFood.vitamin_c ?? 0} mg</span>
+                  </div>
+                  <div className="bg-slate-800 p-2.5 rounded-md flex justify-between border border-slate-700/40">
+                    <span className="text-slate-400">Vitamin E</span>
+                    <span className="font-semibold text-slate-200">{infoFood.vitamin_e ?? 0} mg</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => {
+                  const foodToLog = infoFood;
+                  setInfoFood(null);
+                  handleSelectFood(foodToLog);
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg text-xs transition-colors"
+              >
+                Log This Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RECORD MEAL POPUP MODAL */}
       {selectedFood && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-xl p-6 rounded-xl shadow-2xl space-y-4 relative">
-            
-            {/* Header */}
             <div className="flex justify-between items-start border-b border-slate-800 pb-3">
               <div>
                 <h3 className="text-xl font-bold text-white">
@@ -154,7 +352,6 @@ export default function FoodSearch({ userId, onMealLogged }) {
               </button>
             </div>
 
-            {/* Inputs & Action */}
             <div className="flex items-center gap-4 py-2">
               <label className="text-sm text-slate-300 font-medium">Quantity (grams):</label>
               <input
@@ -180,7 +377,6 @@ export default function FoodSearch({ userId, onMealLogged }) {
               </p>
             )}
 
-            {/* Substitutions */}
             {substitutions.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-800">
                 <h4 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
@@ -199,7 +395,6 @@ export default function FoodSearch({ userId, onMealLogged }) {
                 </div>
               </div>
             )}
-
           </div>
         </div>
       )}

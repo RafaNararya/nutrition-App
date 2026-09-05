@@ -34,7 +34,7 @@ export default function App() {
       })
       .catch((err) => console.error('Error fetching dashboard data:', err))
       .finally(() => setLoading(false));
-  }, [activeUser]);
+  }, [activeUser?.id]);
 
   useEffect(() => {
     if (activeUser) {
@@ -49,6 +49,13 @@ export default function App() {
     setActiveUser(null);
     setSummary(null);
     setLogs([]);
+  };
+
+  const handleProfileUpdated = (updatedUserData) => {
+    if (updatedUserData) {
+      setActiveUser((prev) => ({ ...prev, ...updatedUserData }));
+    }
+    fetchDashboardData();
   };
 
   if (!activeUser) {
@@ -86,7 +93,6 @@ export default function App() {
               <>
                 <SummaryCards summary={summary} />
                 <MicronutrientDashboard summary={summary} />
-                {/* Shows ONLY today's logged meals */}
                 <MealLogs logs={logs} userId={activeUser.id} onLogDeleted={fetchDashboardData} />
               </>
             )}
@@ -107,7 +113,10 @@ export default function App() {
         {activeTab === 'profile' && (
           <div>
             <h2 className="text-2xl font-bold mb-6 text-white">My Profile & Biometrics</h2>
-            <UserProfile activeUser={activeUser} />
+            <UserProfile 
+              activeUser={activeUser} 
+              onProfileUpdated={handleProfileUpdated} 
+            />
           </div>
         )}
       </main>

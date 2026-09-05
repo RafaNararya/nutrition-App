@@ -14,16 +14,17 @@ def calculate_user_values(User):
         "moderately_active": 1.55,
         "heavily_active": 1.725
     }
-    target_calories = bmr * multipliers.get(User.activity_level.value, 1.2)
 
-    # 4. Standard Macro Splits (e.g., 30% Protein, 40% Carbs, 30% Fats)
-    # Protein/Carbs = 4 kcal/g, Fats = 9 kcal/g
+    # Safely extract activity level whether it's stored as an Enum object or raw string
+    activity_key = User.activity_level.value if hasattr(User.activity_level, 'value') else str(User.activity_level)
+    target_calories = bmr * multipliers.get(activity_key, 1.2)
+
+    # Standard Macro Splits (30% Protein, 40% Carbs, 30% Fats)
     target_protein = (target_calories * 0.30) / 4
     target_carbs = (target_calories * 0.40) / 4
     target_fats = (target_calories * 0.30) / 9
 
-    # 5. Clinical Micro-Nutrient RDA Mapping (Simplified baseline example)
-    # In a full app, you can vary these by age/sex brackets!
+    # Clinical Micro-Nutrient RDA Mapping
     is_male = User.gender.lower() == "male"
     
     return {
@@ -35,11 +36,11 @@ def calculate_user_values(User):
         },
         "minerals": {
             "calcium": 1000.0,
-            "iron": 8.0 if is_male else 18.0, # Women require more iron clinically
+            "iron": 8.0 if is_male else 18.0,
             "magnesium": 400.0 if is_male else 310.0,
             "phosphorus": 700.0,
             "potassium": 3400.0 if is_male else 2600.0,
-            "sodium": 2300.0, # Recommended maximum daily cap
+            "sodium": 2300.0,
             "zinc": 11.0 if is_male else 8.0,
             "selenium": 55.0
         },
