@@ -1,14 +1,17 @@
 import axios from 'axios';
 
-// Grab URL from Vite env or fallback to railway domain
+// Ensure VITE_API_URL is forced to HTTPS and stripped of trailing slashes
 let rawUrl = import.meta.env.VITE_API_URL || 'https://nutrition-app-production-b8b1.up.railway.app';
 
-// Ensure it ALWAYS uses https:// and has no trailing slash
-if (rawUrl.startsWith('http://') && !rawUrl.includes('localhost')) {
-  rawUrl = rawUrl.replace('http://', 'https://');
+// Force HTTPS everywhere except local dev
+if (!rawUrl.includes('localhost') && !rawUrl.includes('127.0.0.1')) {
+  rawUrl = rawUrl.replace(/^http:\/\//i, 'https://');
+  if (!rawUrl.startsWith('https://')) {
+    rawUrl = 'https://' + rawUrl;
+  }
 }
 
-const API_BASE_URL = rawUrl.replace(/\/$/, '');
+const API_BASE_URL = rawUrl.replace(/\/+$/, '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -16,6 +19,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
 // Helper functions for your OpenAPI routes
 export const getStatus = () => api.get('/status');
 
@@ -24,7 +28,7 @@ export const searchFood = (query) => {
   return api.get('/search', { params: { query } });
 };
 
-export const registerUser = (userData) => api.post('/users', userData);
+export const registerUser = (userData) => api.post('/users/', userData);
 
 export const updateUserProfile = (userId, profileData) =>
   api.put(`/users/profile/${userId}`, profileData);
