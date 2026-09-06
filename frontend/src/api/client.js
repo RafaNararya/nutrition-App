@@ -1,7 +1,14 @@
 import axios from 'axios';
 
-// Dynamic base URL: Uses Railway environment variable in production, falls back to localhost for local dev
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Grab URL from Vite env or fallback to railway domain
+let rawUrl = import.meta.env.VITE_API_URL || 'https://nutrition-app-production-b8b1.up.railway.app';
+
+// Ensure it ALWAYS uses https:// and has no trailing slash
+if (rawUrl.startsWith('http://') && !rawUrl.includes('localhost')) {
+  rawUrl = rawUrl.replace('http://', 'https://');
+}
+
+const API_BASE_URL = rawUrl.replace(/\/$/, '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,7 +16,6 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
 // Helper functions for your OpenAPI routes
 export const getStatus = () => api.get('/status');
 
