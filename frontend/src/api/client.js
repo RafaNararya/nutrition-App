@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Pointing to your FastAPI server running on port 8000
-const API_BASE_URL = 'http://localhost:8000';
+// Dynamic base URL: Uses Railway environment variable in production, falls back to localhost for local dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
