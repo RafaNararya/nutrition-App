@@ -39,13 +39,14 @@ COPY --from=builder /app/requirements.txt .
 
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
-# Copy app code and data assets (csvFiles)
+# Copy app directory
 COPY ./app ./app
 
-# Run as non-root user
+# Non-root user setup
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use shell execution so $PORT is expanded at runtime
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
